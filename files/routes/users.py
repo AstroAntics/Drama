@@ -14,7 +14,6 @@ from pusher_push_notifications import PushNotifications
 from collections import Counter
 
 site = environ.get("DOMAIN").strip()
-
 beams_client = PushNotifications(instance_id=PUSHER_INSTANCE_ID, secret_key=PUSHER_KEY)
 
 
@@ -22,38 +21,28 @@ beams_client = PushNotifications(instance_id=PUSHER_INSTANCE_ID, secret_key=PUSH
 @auth_desired
 def upvoters(v, username):
 	id = get_user(username).id
-
 	votes = g.db.query(Vote.user_id, func.count(Vote.user_id)).join(Submission, Vote.submission_id==Submission.id).filter(Vote.vote_type==1, Submission.author_id==id).group_by(Vote.user_id).order_by(func.count(Vote.user_id).desc()).all()
-
 	votes2 = g.db.query(CommentVote.user_id, func.count(CommentVote.user_id)).join(Comment, CommentVote.comment_id==Comment.id).filter(CommentVote.vote_type==1, Comment.author_id==id).group_by(CommentVote.user_id).order_by(func.count(CommentVote.user_id).desc()).all()
-
 	votes = Counter(dict(votes)) + Counter(dict(votes2))
-
 	users = g.db.query(User).filter(User.id.in_(votes.keys())).all()
 	users2 = []
-	for user in users: users2.append((user, votes[user.id]))
-
+	for user in users: 
+		users2.append((user, votes[user.id]))
 	users = sorted(users2, key=lambda x: x[1], reverse=True)[:25]
-
 	return render_template("voters.html", v=v, users=users, name='Up', name2=f'@{username} biggest simps')
 
 @app.get("/@<username>/downvoters")
 @auth_desired
 def downvoters(v, username):
 	id = get_user(username).id
-
 	votes = g.db.query(Vote.user_id, func.count(Vote.user_id)).join(Submission, Vote.submission_id==Submission.id).filter(Vote.vote_type==-1, Submission.author_id==id).group_by(Vote.user_id).order_by(func.count(Vote.user_id).desc()).all()
-
 	votes2 = g.db.query(CommentVote.user_id, func.count(CommentVote.user_id)).join(Comment, CommentVote.comment_id==Comment.id).filter(CommentVote.vote_type==-1, Comment.author_id==id).group_by(CommentVote.user_id).order_by(func.count(CommentVote.user_id).desc()).all()
-
 	votes = Counter(dict(votes)) + Counter(dict(votes2))
-
 	users = g.db.query(User).filter(User.id.in_(votes.keys())).all()
 	users2 = []
-	for user in users: users2.append((user, votes[user.id]))
-
+	for user in users: 
+		users2.append((user, votes[user.id]))
 	users = sorted(users2, key=lambda x: x[1], reverse=True)[:25]
-
 	return render_template("voters.html", v=v, users=users, name='Down', name2=f'@{username} biggest haters')
 
 @app.get("/@<username>/upvoting")
@@ -169,7 +158,8 @@ def thiefs(v):
 @auth_required
 def suicide(v, username):
 	t = int(time.time())
-	if v.admin_level == 0 and t - v.suicide_utc < 86400: return {"message": "You're on 1-day cooldown!"}
+	if v.admin_level == 0 and t - v.suicide_utc < 86400: 
+		return {"message": "You're on 1-day cooldown!"}
 	user = get_user(username)
 	suicide = f"Hi there,\n\nA [concerned user]({v.url}) reached out to us about you.\n\nWhen you're in the middle of something painful, it may feel like you don't have a lot of options. But whatever you're going through, you deserve help and there are people who are here for you.\n\nThere are resources available in your area that are free, confidential, and available 24/7:\n\n- Call, Text, or Chat with Canada's [Crisis Services Canada](https://www.crisisservicescanada.ca/en/)\n- Call, Email, or Visit the UK's [Samaritans](https://www.samaritans.org/)\n- Text CHAT to America's [Crisis Text Line](https://www.crisistextline.org/) at 741741.\nIf you don't see a resource in your area above, the moderators at r/SuicideWatch keep a comprehensive list of resources and hotlines for people organized by location. Find Someone Now\n\nIf you think you may be depressed or struggling in another way, don't ignore it or brush it aside. Take yourself and your feelings seriously, and reach out to someone.\n\nIt may not feel like it, but you have options. There are people available to listen to you, and ways to move forward.\n\nYour fellow users care about you and there are people who want to help."
 	send_notification(user.id, suicide)
@@ -183,8 +173,10 @@ def suicide(v, username):
 @auth_required
 def get_coins(v, username):
 	user = get_user(username)
-	if user != None: return {"coins": user.coins}, 200
-	else: return {"error": "invalid_user"}, 404
+	if user is not None: 
+		return {"coins": user.coins}, 200
+	else: 
+		return {"error": "invalid_user"}, 404
 
 @app.post("/@<username>/transfer_coins")
 @limiter.limit("1/second")
@@ -288,9 +280,11 @@ def get_css(username):
 @app.get("/@<username>/profilecss")
 def get_profilecss(username):
 	user = get_user(username)
-	if user.profilecss: profilecss = user.profilecss
-	else: profilecss = ""
-	resp=make_response(profilecss)
+	if user.profilecss: 
+		profilecss = user.profilecss
+	else: 
+		profilecss = ""
+	resp= make_response(profilecss)
 	resp.headers.add("Content-Type", "text/css")
 	return resp
 
