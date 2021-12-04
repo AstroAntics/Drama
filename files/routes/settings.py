@@ -489,13 +489,22 @@ def gumroad(v):
 
 	data = {
 		'access_token': GUMROAD_TOKEN,
-		'email': v.email
 	}
-	response = requests.get('https://api.gumroad.com/v2/sales', data=data, timeout=5).json()["sales"]
 
-	if len(response) == 0: return {"error": "Email not found"}, 404
+	response = [x['email'] for x in requests.get('https://api.gumroad.com/v2/products/tfcvri/subscribers', data=data, timeout=5).json()["subscribers"]]
+	emails = []
 
-	response = response[0]
+	for email in response:
+		if email.endswith("@gmail.com"):
+			email=email.split('@')[0]
+			email=email.split('+')[0]
+			email=email.replace('.','').replace('_','')
+			email=f"{email}@gmail.com"
+		emails.append(email)
+
+	if v.email not in emails: return {"error": "Email not found"}, 404
+
+	response = requests.get('https://api.gumroad.com/v2/sales', data=data, timeout=5).json()["sales"][0]
 	tier = tiers[response["variants_and_quantity"]]
 	if v.patron == tier: return {"error": f"{patron} rewards already claimed"}, 400
 
@@ -752,10 +761,12 @@ def settings_images_banner(v):
 @auth_required
 @validate_formkey
 def settings_delete_profile(v):
-	v.highres = None
-	v.profileurl = None
-	g.db.add(v)
-	g.db.commit()
+
+	if v.profileurl or v.highres:
+		v.deletepfp()
+		g.db.add(v)
+		g.db.commit()
+
 	return render_template("settings_profile.html", v=v,
 						   msg="Profile picture successfully removed.")
 
@@ -765,12 +776,12 @@ def settings_delete_profile(v):
 @validate_formkey
 def settings_delete_banner(v):
 
-	v.bannerurl = None
-	g.db.add(v)
-	g.db.commit()
+	if v.bannerurl:
+		v.deletebanner()
+		g.db.add(v)
+		g.db.commit()
 
-	return render_template("settings_profile.html", v=v,
-						   msg="Banner successfully removed.")
+	return render_template("settings_profile.html", v=v,  msg="Banner successfully removed.")
 
 
 @app.get("/settings/blocks")

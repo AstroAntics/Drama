@@ -45,7 +45,7 @@ def post_pid_comment_cid(cid, pid=None, anything=None, v=None):
 			g.db.add(notif)
 			g.db.commit()
 
-	if comment.post and comment.post.club and not (v and (v.paid_dues or v.id in [post.author_id, comment.post.author_id])): abort(403)
+	if comment.post and comment.post.club and not (v and (v.paid_dues or v.id in [comment.author_id, comment.post.author_id])): abort(403)
 
 	if not comment.parent_submission and not (v and (comment.author.id == v.id or comment.sentto == v.id)) and not (v and v.admin_level > 1) : abort(403)
 	
@@ -646,6 +646,18 @@ def edit_comment(cid, v):
 			body = body.replace('I ', f'@{v.username} ')
 			body = censor_slurs2(body).upper().replace(' ME ', f' @{v.username} ')
 
+		if not c.options:
+			for i in re.finditer('\s*\$\$([^\$\n]+)\$\$\s*', body):
+				body = body.replace(i.group(0), "")
+				c_option = Comment(author_id=AUTOPOLLER_ID,
+					parent_submission=c.parent_submission,
+					parent_comment_id=c.id,
+					level=c.level+1,
+					body_html=filter_title(i.group(1)),
+					upvotes=0
+					)
+				g.db.add(c_option)
+
 		body_html = sanitize(CustomRenderer().render(mistletoe.Document(body)))
 
 		if v.marseyawarded and len(list(re.finditer('>[^<\s+]|[^>\s+]<', body_html))) > 0: return {"error":"You can only type marseys!"}, 403
@@ -816,7 +828,7 @@ def edit_comment(cid, v):
 
 		g.db.commit()
 
-	return c.body_html
+	return c.body_html + c.options_html(v)
 
 
 @app.post("/delete/comment/<cid>")
